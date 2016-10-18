@@ -1,19 +1,19 @@
 //KALMAN
-	private static double xPrime = 0;
-	private static double pPrime = 1;
-	private static double gain = 0;
-	private static double noise = 0.1f; //can be changed depending on the environment 
+private static double xPrime = 0;
+private static double pPrime = 1;
+private static double gain = 0;
+private static double noise = 0.1f; //can be changed depending on the environment 
 		
 	//function using Kalman filter 
-	private static double kalmanFilteredData(double reading){
-		double currentXPrime = xPrime;
-		double currentPPrime = pPrime;
+private static double kalmanFilteredData(double reading){
+	double currentXPrime = xPrime;
+	double currentPPrime = pPrime;
 		
-		gain = currentPPrime /( currentPPrime + noise);
-		currentXPrime = currentXPrime + gain * (reading - currentXPrime);
-		currentPPrime = (1 - gain)* currentPPrime;
-		xPrime = currentXPrime;
-		pPrime = currentPPrime;
+	gain = currentPPrime /( currentPPrime + noise);
+	currentXPrime = currentXPrime + gain * (reading - currentXPrime);
+	currentPPrime = (1 - gain)* currentPPrime;
+	xPrime = currentXPrime;
+	pPrime = currentPPrime;
 		
-		return xPrime;
-	}
+	return xPrime;
+}
