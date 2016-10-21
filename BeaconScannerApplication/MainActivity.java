@@ -1,13 +1,10 @@
 package com.example.beacontest2;
 
-import java.util.ArrayList;
 
 //import static android.support.v4.app.FragmentActivity.TAG;
 
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 import org.altbeacon.beacon.Beacon;
 import org.altbeacon.beacon.BeaconConsumer;
@@ -19,9 +16,10 @@ import org.altbeacon.beacon.Region;
 import android.os.Bundle;
 import android.os.RemoteException;
 import android.support.v7.app.ActionBarActivity;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.ArrayAdapter;
+import android.widget.ListView;
 import android.widget.TextView;
 
 public class MainActivity extends ActionBarActivity implements BeaconConsumer{
@@ -39,17 +37,20 @@ public class MainActivity extends ActionBarActivity implements BeaconConsumer{
 	private String comparator;
 	
 	private double 
-	a  = 0,
-	b = 0,
-	d = 1,
-	e = 0,
-	g = 0,
-	h = 1,
+	a  = 0,			//X coordinate of beacon 1
+	b = 0,			//Y coordinate of beacon 1
+	d = 1,			//X coordinate of beacon 2
+	e = 0,			//Y coordinate of beacon 2
+	g = 0,			//X coordinate of beacon 3
+	h = 1,			//Y coordinate of beacon 3
 	
-	c = 0,
-	f = 0,
-	i = 0;
+	c = 0,			//initial value of the distance of the receiver to beacon 1
+	f = 0,			//initial value of the distance of the receiver to beacon 2
+	i = 0;			//initial value of the distance of the receiver to beacon 3
 	
+	ListView listView;
+	ArrayAdapter<String>adapter;
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -69,32 +70,15 @@ public class MainActivity extends ActionBarActivity implements BeaconConsumer{
 		beaconManager.setBackgroundScanPeriod(1100l);
 		beaconManager.setBackgroundBetweenScanPeriod(250l);
 		beaconManager.bind(this);
-	}
-
-	@Override
-	public boolean onCreateOptionsMenu(Menu menu) {
-		// Inflate the menu; this adds items to the action bar if it is present.
-		getMenuInflater().inflate(R.menu.main, menu);
-		return true;
-	}
-
-	@Override
-	public boolean onOptionsItemSelected(MenuItem item) {
-		// Handle action bar item clicks here. The action bar will
-		// automatically handle clicks on the Home/Up button, so long
-		// as you specify a parent activity in AndroidManifest.xml.
-		int id = item.getItemId();
-		if (id == R.id.action_settings) {
-			return true;
-		}
-		return super.onOptionsItemSelected(item);
+		
 	}
 	
 	protected void onDestroy() {
         super.onDestroy();
         beaconManager.unbind(this);
     }
-    @Override
+    @SuppressWarnings("deprecation")
+	@Override
     public void onBeaconServiceConnect() {
         beaconManager.setRangeNotifier(new RangeNotifier() {
             @Override 
@@ -105,39 +89,40 @@ public class MainActivity extends ActionBarActivity implements BeaconConsumer{
                 	while(beaconIterator.hasNext()){
            
                 		Beacon beacon = beaconIterator.next();
-                	
-//                		Log.d("Beacon: ", beacon.getId1().toString() + " Distance: " + beacon.getDistance());
-                		UUID = beacon.getId1().toString();
-                		distance = beacon.getDistance();
                 		
-                		RSSI = beacon.getRssi();
-                		txPower = beacon.getTxPower();
-                		comparator = UUID.substring(UUID.length()-6);
-                		         		                		
+                		UUID = beacon.getId1().toString();				//ID of the beacon
+                		RSSI = beacon.getRssi();         				//Rssi(Received signal strength indicator) measurement between the 
+                														//receiver and the beacons
+                		distance = beacon.getDistance();				//computed distance between the receiver and the beacons (Library 
+                														//based: altbeacon) not used in the application
+                		txPower = beacon.getTxPower();					//txPower of the beacon
+                		comparator = UUID.substring(UUID.length()-6);   //A String for filtering the ID of the beacons           		
+                		
                 		runOnUiThread(new Runnable(){
-    						public void run(){
-    														
+    						public void run(){  							
+    													 								
     							switch(comparator){
     							
     							case "beac01":
     								txtUUID1.setText("UUID: beacon1");
-    								txtDistance1.setText("Distance: " + distance);
-    								c = distance;
+    								txtDistance1.setText("Distance: " + averageDistance(distance));
+    								c = averageDistance(distance);
     								break;
     							case "beac02":
     								txtUUID2.setText("UUID: beacon2");
-    								txtDistance2.setText("Distance: " + distance);
-    								f = distance;
+    								txtDistance2.setText("Distance: " + averageDistance(distance));
+    								f = averageDistance(distance);
     								break;
     							case "beac03":
     								txtUUID3.setText("UUID: beacon3");
-    								txtDistance3.setText("Distance: " + distance);
-    								i = distance;
+    								txtDistance3.setText("Distance: " + averageDistance(distance));
+    								i = averageDistance(distance);
     								break;
     							default:
     								break;    								
     							}
     							
+    							//get the x and y coordinates of the receiver
     							txtXPos.setText("X-Position: " + getXCoordinate());
     							txtYPos.setText("Y-Position: " + getYCoordinate());
     						}
@@ -151,22 +136,8 @@ public class MainActivity extends ActionBarActivity implements BeaconConsumer{
             beaconManager.startRangingBeaconsInRegion(new Region("myRangingUniqueId", null, null, null));
         } catch (RemoteException e) {    }
     }
-    
-//    private double computeDistance(int RSSI, int TxPower){
-//    	double distance = 0;
-//    	
-//    	distance = 10*((RSSI-TxPower)/(10*1.7));
-//    	
-//    	return distance;
-//    }
-    
-//    private double computeDistance(double rssi){
-//    	 double result =  (-2.2286 + Math.sqrt(Math.pow(2.2286, 2) - 4 * 0.4286 * (37.8 - (rssi * -1)))) / (2 * 0.4286);
-//
-//         return result;
-//         
-//    }
-    
+     
+    //Computation for getting the distance between the receiver and the beacons
     private double computeDistance(int RSSI, int txPower){	
     	
     	if(RSSI == 0)
@@ -182,18 +153,18 @@ public class MainActivity extends ActionBarActivity implements BeaconConsumer{
     	}
     }
     
-    private double aveDistance(double distance){
-    	double average = 0;
-    	double output = 0;
-    	
-    	for(int x=0; x<25; x++){
-    		average+=distance;
+    private double averageDistance(double distance ){
+    	double averageData = 0;
+    	double outputData = 0;
+    	for(int x=0; x<50; x++){
+    		averageData+=distance;
     	}
     	
-    	output = average/25;
-    	return output;
+    	outputData = averageData/50;
+    	return outputData;
     }
     
+    //************************TRILATERATION************************//
     
 	//xCoordinate computation.
 	private double getXCoordinate(){
